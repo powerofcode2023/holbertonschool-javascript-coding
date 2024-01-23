@@ -8,17 +8,32 @@ request(url, (err, response, body) => {
     return;
   }
 
-  const tasks = JSON.parse(body);
-  const results = {};
+  if (response.statusCode !== 200) {
+    console.error(`Error status code: ${response.statusCode}`);
+    return;
+  }
 
-  tasks.forEach(task => {
-    if (task.completed) {
-      if (!results[task.userId]) {
-        results[task.userId] = 0;
+  try {
+    const tasks = JSON.parse(body);
+    const results = {};
+
+    tasks.forEach(task => {
+      if (task.completed) {
+        if (!results[task.userId]) {
+          results[task.userId] = 0;
+        }
+        results[task.userId]++;
       }
-      results[task.userId]++;
-    }
-  });
+    });
 
-  console.log(results);
+    for (const user in results) {
+      if (results.hasOwnProperty(user) && results[user] === 0) {
+        delete results[user];
+      }
+    }
+
+    console.log(results);
+  } catch (error) {
+    console.error(error);
+  }
 });

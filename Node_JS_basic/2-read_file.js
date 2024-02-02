@@ -1,58 +1,29 @@
 const fs = require('fs');
-const readline = require('readline');
-
-const results = [];
 
 const countStudents = (path) => {
-  let stCount = 0;
-  let FIELD = '';
-  let FIELD2 = '';
-  let stByField = 0;
-  let stByField2 = 0;
-  const LIST_OF_FIRSTNAMES = [];
-  const LIST_OF_FIRSTNAMES2 = [];
-
+  let data;
   try {
-    fs.readFileSync(path, 'utf8');
+    data = fs.readFileSync(path, 'utf8');
   } catch (error) {
     throw new Error('Cannot load the database');
   }
 
-  const readStream = fs.createReadStream(path);
+  const lines = data.trim().split('\n');
 
-  const readInterface = readline.createInterface({
-    input: readStream,
+  const students = lines.slice(1).filter((line) => line);
+
+  const fields = {};
+  students.forEach((student) => {
+    const [firstname, , , field] = student.split(',');
+    if (!fields[field]) {
+      fields[field] = [];
+    }
+    fields[field].push(firstname);
   });
 
-  // Event handler for reading lines
-  readInterface.on('line', (line) => {
-    const row = line.split(',');
-    results.push(row);
-  });
-
-  // Event handler for the end of file
-  readInterface.on('close', () => {
-    results.forEach((e, i) => {
-      if (i !== 0) {
-        if (e[i] !== 0) {
-          stCount += 1;
-        }
-        if (!FIELD) [, , , FIELD] = e;
-        if (e[3] === FIELD) {
-          LIST_OF_FIRSTNAMES.push(` ${e[0]}`);
-          stByField += 1;
-        } else {
-          [, , , FIELD2] = e;
-          LIST_OF_FIRSTNAMES2.push(` ${e[0]}`);
-          stByField2 += 1;
-        }
-      }
-    });
-
-    process.stdout.write(`Number of students: ${stCount}\n`);
-
-    process.stdout.write(`Number of students in ${FIELD}: ${stByField}. List:${LIST_OF_FIRSTNAMES}\n`);
-    process.stdout.write(`Number of students in ${FIELD2}: ${stByField2}. List:${LIST_OF_FIRSTNAMES2}\n`);
+  console.log(`Number of students: ${students.length}`);
+  Object.keys(fields).forEach((field) => {
+    console.log(`Number of students in ${field}: ${fields[field].length}. List: ${fields[field].join(', ')}`);
   });
 };
 

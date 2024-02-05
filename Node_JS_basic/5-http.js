@@ -1,36 +1,67 @@
 const http = require('http');
+const url = require('url');
+const fs = require('fs').promises;
 
-const args = process.argv.slice(2);
-const countStudents = require('./3-read_file_async');
+async function countStudents(path) {
+  return fs.readFile(path, 'utf8')
+    .then((data) => {
+      const stringData = data.toString();
 
-const DATABASE = args[0];
+      const arrayData = stringData.split('\n').slice(1);
 
-const hostname = '127.0.0.1';
-const port = 1245;
+      const filteredArrayData = arrayData.filter((line) => line !== '');
 
-const app = http.createServer(async (req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
+      const namesByField = {};
 
-  const { url } = req;
+      filteredArrayData.forEach((line) => {
+        const parts = line.split(',');
+        const firstName = parts[0];
+        const field = parts[3];
 
-  if (url === '/') {
+        if (!namesByField[field]) {
+          namesByField[field] = [];
+        }
+
+        namesByField[field].push(firstName);
+      });
+
+      const results = [`Number of students: ${filteredArrayData.length}`];
+
+      const fields = Object.keys(namesByField);
+      for (const field of fields) {
+        const names = namesByField[field];
+        const count = names.length;
+        const list = names.join(', ');
+        results.push(`Number of students in ${field}: ${count}. List: ${list}`);
+      }
+      return results;
+    })
+    .catch(() => {
+      throw new Error('Cannot load the database');
+    });
+}
+
+const app = http.createServer((req, res) => {
+  const reqUrl = url.parse(req.url).pathname;
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  if (reqUrl === '/') {
     res.write('Hello Holberton School!');
-  } else if (url === '/students') {
+    res.end();
+  } else if (reqUrl === '/students') {
+    const path = process.argv[2];
     res.write('This is the list of our students\n');
-    try {
-      const students = await countStudents(DATABASE);
-      res.end(`${students.join('\n')}`);
-    } catch (error) {
-      res.end(error.message);
-    }
+    countStudents(path)
+      .then((data) => {
+        res.write(data.join('\n'));
+        res.end();
+      })
+      .catch((err) => {
+        res.write(err.message);
+        res.end();
+      });
   }
-  res.statusCode = 404;
-  res.end();
 });
 
-app.listen(port, hostname, () => {
-  
-});
+app.listen(1245);
 
 module.exports = app;
